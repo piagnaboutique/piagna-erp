@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PIAGNA — Gestion Commerciale Complète</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f3f6f4; }
+    .sidebar-gradient { background: linear-gradient(180deg, #0b5d1e 0%, #094a18 75%, #073b13 100%); }
+    .orange-gradient { background: linear-gradient(135deg, #ff8f00 0%, #f57c00 100%); }
+    .green-btn-gradient { background: linear-gradient(135deg, #157a2c 0%, #0b5d1e 100%); }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    @media print {
+      body * { visibility: hidden; }
+      #receipt-printable, #receipt-printable * { visibility: visible; }
+      #receipt-printable { position: fixed; left: 0; top: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased overflow-x-hidden">
+
+  <!-- ==================== ÉCRAN DE CONNEXION ==================== -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#0b5d1e] via-[#094a18] to-emerald-950">
+    <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border-t-8 border-[#ff8f00] space-y-6">
+      <div class="text-center">
+        <div class="w-16 h-16 mx-auto rounded-full bg-orange-50 border-2 border-[#ff8f00] flex items-center justify-center text-3xl shadow-sm mb-3">🍊</div>
+        <h1 class="text-2xl font-extrabold text-[#0b5d1e] tracking-wide">PIAGNA</h1>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Gestion Commerciale • Boutique PIAGNA</p>
+      </div>
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Adresse e-mail</label>
+          <input id="login-email" type="email" required placeholder="ex: piagnaboutique@gmail.com" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0b5d1e]" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Mot de passe</label>
+          <input id="login-password" type="password" required placeholder="••••••••" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#0b5d1e]" />
+        </div>
+        <div id="auth-error" class="hidden text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl p-3"></div>
+        <button id="login-btn" type="submit" class="w-full green-btn-gradient hover:opacity-95 text-white font-extrabold py-3.5 rounded-xl text-sm shadow-lg transition">
+          Se connecter à PIAGNA
+        </button>
+      </form>
+      <p class="text-center text-[11px] text-slate-400 italic">PIAGNA, votre partenaire pour une gestion réussie !</p>
+    </div>
+  </div>
+
+  <!-- ==================== APPLICATION COMPLÈTE ==================== -->
+  <div id="app-screen" class="hidden min-h-screen flex-col lg:flex-row">
+
+    <!-- MENU LATÉRAL GAUCHE (11 MODULES ACTIFS) -->
+    <aside class="w-full lg:w-64 sidebar-gradient text-white flex flex-col justify-between shrink-0 shadow-xl">
+      <div class="h-2 w-full orange-gradient"></div>
+      <div class="p-4 flex-1 flex flex-col">
+        <div class="flex flex-col items-center text-center mb-5 pt-1">
+          <div class="w-14 h-14 rounded-full bg-white p-1 shadow-md flex items-center justify-center mb-2 border-2 border-orange-400">
+            <div class="w-full h-full rounded-full bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white font-black text-xl">🍊</div>
+          </div>
+          <div class="tracking-wider font-extrabold text-2xl leading-none text-white">PIAGNA</div>
+          <div class="text-xs text-emerald-100 font-medium mt-1">Gestion Commerciale</div>
+        </div>
+
+        <nav class="space-y-1 text-sm font-medium flex-1">
+          <button data-tab="pos" onclick="navigateTo('pos')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl orange-gradient text-white font-bold shadow-md transition">
+            <span>🛒</span><span>Caisse / Ventes</span>
+          </button>
+          <button data-tab="dashboard" onclick="navigateTo('dashboard')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span>🏠</span><span>Tableau de bord</span>
+          </button>
+          <button data-tab="products" onclick="navigateTo('products')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span>📦</span><span>Produits</span>
+          </button>
+          <button data-tab="purchases" onclick="navigateTo('purchases')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span>🚚</span><span>Achats</span>
+          </button>
+          <button data-tab="customers" onclick="navigateTo('customers')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span>👥</span><span>Clients</span>
+          </button>
+          <button data-tab="debts" onclick="navigateTo('debts')" class="nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span class="flex items-center gap-3"><span>💳</span><span>Dettes & Paiements</span></span>
+            <span id="sidebar-debt-count" class="bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+          </button>
+          <button data-tab="stock" onclick="navigateTo('stock')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span>🏬</span><span>Stock</span>
+          </button>
+          <button data-tab="expenses" onclick="navigateTo('expenses')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span>👛</span><span>Dépenses</span>
+          </button>
+          <button data-tab="reports" onclick="navigateTo('reports')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span>📊</span><span>Rapports & Analyses</span>
+          </button>
+          <button data-tab="users" onclick="navigateTo('users')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span>👤</span><span>Utilisateurs</span>
+          </button>
+          <button data-tab="settings" onclick="navigateTo('settings')" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition">
+            <span>⚙️</span><span>Paramètres</span>
+          </button>
+        </nav>
+
+        <div class="mt-4 bg-white text-slate-800 rounded-2xl p-3 shadow-md">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xl">☁️</span>
+              <div class="text-xs font-bold leading-tight">Connecté<br/>Supabase & Drive</div>
+            </div>
+            <span class="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold">✓</span>
+          </div>
+          <div id="sync-time" class="text-[11px] text-emerald-700 font-medium mt-1.5">Dernière sync. : --:--</div>
+        </div>
+        <p class="text-center text-[11px] italic text-emerald-100 mt-3 leading-snug">PIAGNA, votre partenaire pour une gestion réussie !</p>
+      </div>
+      <div class="h-2 w-full orange-gradient"></div>
+    </aside>
+
+    <!-- CONTENU PRINCIPAL -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <!-- EN-TÊTE -->
+      <header class="bg-white border-b border-slate-200 px-4 lg:px-6 py-3 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-emerald-100 text-[#0b5d1e] flex items-center justify-center font-bold text-lg">👤</div>
+          <div>
+            <div class="font-bold text-slate-900 text-sm lg:text-base flex items-center gap-1.5">
+              <span id="header-user-name">Bonjour, CHIE</span>
+              <button onclick="handleLogout()" class="text-[11px] text-red-600 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-md font-semibold ml-1">Déconnexion</button>
+            </div>
+            <div id="header-user-role" class="text-xs text-slate-500">Propriétaire</div>
+          </div>
+        </div>
+
+        <div class="bg-orange-50 border border-orange-200 rounded-xl px-4 py-2 flex items-center gap-3">
+          <span class="text-xl">🏪</span>
+          <div>
+            <div id="header-store-name" class="font-bold text-slate-900 text-sm">Boutique PIAGNA</div>
+            <div id="header-store-subtitle" class="text-xs text-slate-500">Commerce Divers</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 text-sm">
+          <div class="flex items-center gap-1.5 text-emerald-700 font-semibold">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>En ligne</span>
+          </div>
+          <button onclick="loadAllData()" class="p-2 rounded-full hover:bg-slate-100 transition text-base" title="Actualiser">🔄</button>
+          <div class="text-right leading-tight border-l border-slate-200 pl-4">
+            <div id="live-date" class="font-semibold text-slate-800 text-xs">--</div>
+            <div id="live-time" class="text-xs text-slate-500 font-medium">--:--</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- ==================== MODULE 1 : CAISSE / VENTES ==================== -->
+      <main id="view-pos" class="app-view flex-1 p-4 lg:p-5 grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+        <section class="xl:col-span-7 flex flex-col gap-4">
+          <div class="bg-white rounded-2xl p-2 shadow-sm border border-slate-200 flex items-center gap-2">
+            <span class="pl-3 text-slate-400">🔍</span>
+            <input id="search-input" type="text" oninput="renderProducts()" placeholder="Rechercher un produit par nom, code SKU ou catégorie..." class="w-full py-2 px-2 text-sm focus:outline-none bg-transparent" />
+            <button onclick="navigateTo('products')" class="orange-gradient text-white px-3.5 py-2 rounded-xl font-bold text-xs whitespace-nowrap shadow-sm hover:opacity-95">+ Produit</button>
+          </div>
+
+          <div id="category-filters" class="flex flex-wrap gap-2"></div>
+
+          <div id="products-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3.5 min-h-[220px]"></div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-1">
+            <button onclick="openClientModal()" class="bg-white hover:bg-emerald-50 border border-slate-200 rounded-2xl p-3 flex items-center gap-3 shadow-sm transition text-left">
+              <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg">👤+</div>
+              <div class="min-w-0">
+                <div id="quick-client-name" class="font-bold text-slate-800 text-xs sm:text-sm truncate">Ajouter client</div>
+                <div id="quick-client-phone" class="text-[11px] text-slate-500 truncate">(facultatif)</div>
+              </div>
+            </button>
+
+            <button onclick="promptDiscount()" class="bg-white hover:bg-emerald-50 border border-slate-200 rounded-2xl p-3 flex items-center gap-3 shadow-sm transition text-left">
+              <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg">%</div>
+              <div>
+                <div class="font-bold text-slate-800 text-xs sm:text-sm">Remise (%)</div>
+                <div id="quick-discount-label" class="text-[11px] text-slate-500">0 % appliquée</div>
+              </div>
+            </button>
+
+            <button onclick="promptNotes()" class="bg-white hover:bg-emerald-50 border border-slate-200 rounded-2xl p-3 flex items-center gap-3 shadow-sm transition text-left">
+              <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg">📝</div>
+              <div class="min-w-0">
+                <div class="font-bold text-slate-800 text-xs sm:text-sm">Notes</div>
+                <div id="quick-notes-label" class="text-[11px] text-slate-500 truncate">(Optionnel)</div>
+              </div>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-1">
+            <div class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
+              <div class="w-11 h-11 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-xl">🛍️</div>
+              <div>
+                <div class="text-xs text-slate-600 font-medium">Ventes du jour</div>
+                <div id="kpi-daily-sales" class="text-base font-extrabold text-slate-900">0 FCFA</div>
+                <div class="text-[11px] font-bold text-emerald-700">Temps réel</div>
+              </div>
+            </div>
+            <div class="bg-orange-50/90 border border-orange-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
+              <div class="w-11 h-11 rounded-xl bg-orange-500 text-white flex items-center justify-center text-xl">👥</div>
+              <div>
+                <div class="text-xs text-slate-600 font-medium">Ventes à crédit</div>
+                <div id="kpi-debtors-count" class="text-base font-extrabold text-slate-900">0</div>
+                <div id="kpi-debtors-amount" class="text-xs font-bold text-orange-700">0 FCFA</div>
+              </div>
+            </div>
+            <div class="bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
+              <div class="w-11 h-11 rounded-xl bg-emerald-700 text-white flex items-center justify-center text-xl">📦</div>
+              <div>
+                <div class="text-xs text-slate-600 font-medium">Stock disponible</div>
+                <div id="kpi-stock-count" class="text-base font-extrabold text-slate-900">0 articles</div>
+                <div class="text-[11px] text-emerald-700 font-medium">Catalogue actif</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="xl:col-span-5 bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden flex flex-col">
+          <div class="bg-[#0b5d1e] text-white px-5 py-3.5 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 font-bold text-base">
+              <span>🛒</span>
+              <span>Panier (<span id="cart-total-qty">0</span> articles)</span>
+            </div>
+            <button onclick="clearCart()" class="text-emerald-100 hover:text-white text-sm" title="Vider le panier">🗑️</button>
+          </div>
+
+          <div class="bg-emerald-50 border-b border-emerald-200 px-4 py-2 flex items-center justify-between text-xs">
+            <div>
+              <span class="font-bold text-emerald-900">Client :</span>
+              <span id="banner-client-info" class="text-slate-700">Client comptant (Anonyme)</span>
+            </div>
+            <button onclick="openClientModal()" class="text-orange-600 font-bold hover:underline">Modifier</button>
+          </div>
+
+          <div id="cart-items-list" class="divide-y divide-slate-100 max-h-[250px] overflow-y-auto custom-scroll px-4"></div>
+
+          <div class="p-4 bg-slate-50 border-t border-slate-200 space-y-2 text-sm">
+            <div class="flex justify-between text-slate-600">
+              <span>Sous-total :</span>
+              <span id="subtotal-amount" class="font-bold text-slate-900">0 FCFA</span>
+            </div>
+            <div class="flex justify-between text-slate-600">
+              <span>Remise (<span id="discount-percent-display">0</span>%) :</span>
+              <span id="discount-amount" class="font-bold text-red-600">0 FCFA</span>
+            </div>
+            <div class="bg-[#0b5d1e] text-white rounded-xl px-4 py-3 flex items-center justify-between shadow-sm">
+              <span class="font-bold text-base">Total à payer :</span>
+              <span id="total-amount" class="text-xl font-extrabold">0 FCFA</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5 pt-1">
+              <div class="bg-white border-2 border-emerald-600/30 rounded-xl p-2.5">
+                <label for="advance-input" class="block text-[11px] font-bold text-slate-500 uppercase">Avance versée (FCFA)</label>
+                <input id="advance-input" type="number" min="0" step="100" value="0" oninput="onAdvanceChange()" class="w-full font-extrabold text-base text-emerald-800 bg-transparent focus:outline-none mt-0.5" />
+              </div>
+              <div class="bg-orange-50 border border-orange-200 rounded-xl p-2.5">
+                <span class="block text-[11px] font-bold text-orange-700 uppercase">Reste à payer</span>
+                <div id="remaining-amount" class="font-extrabold text-base text-orange-700 mt-0.5">0 FCFA</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-4 pt-3 pb-4 space-y-3">
+            <div class="text-xs font-bold text-slate-700">Mode de paiement</div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button onclick="selectPaymentMethod('cash', this)" class="pay-btn bg-[#0b5d1e] text-white rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-sm transition">
+                <span class="text-lg mb-1">💵</span><span class="text-[11px] font-bold leading-tight">Espèces</span>
+              </button>
+              <button onclick="selectPaymentMethod('card', this)" class="pay-btn bg-slate-100 hover:bg-orange-50 text-slate-700 rounded-xl p-2.5 flex flex-col items-center justify-center text-center border border-slate-200 transition">
+                <span class="text-lg mb-1">💳</span><span class="text-[11px] font-bold leading-tight">Carte Mobile Money</span>
+              </button>
+              <button onclick="selectPaymentMethod('mobile_money', this)" class="pay-btn bg-slate-100 hover:bg-emerald-50 text-slate-700 rounded-xl p-2.5 flex flex-col items-center justify-center text-center border border-slate-200 transition">
+                <span class="text-lg mb-1">📱</span><span class="text-[11px] font-bold leading-tight">Mobile Money</span>
+              </button>
+              <button onclick="selectPaymentMethod('credit', this)" class="pay-btn bg-slate-100 hover:bg-orange-50 text-slate-700 rounded-xl p-2.5 flex flex-col items-center justify-center text-center border border-slate-200 transition">
+                <span class="text-lg mb-1">📅</span><span class="text-[11px] font-bold leading-tight">À crédit</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-12 gap-2.5 pt-2">
+              <button onclick="openReceiptModal()" class="col-span-3 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl py-3 px-2 flex flex-col items-center justify-center text-center font-bold text-xs transition">
+                <span class="text-base mb-0.5">🖨️</span><span>Imprimer Reçu</span>
+              </button>
+              <button onclick="shareWhatsApp()" class="col-span-4 orange-gradient hover:opacity-95 text-white rounded-xl py-3 px-2 flex flex-col items-center justify-center text-center font-bold text-xs shadow-md transition">
+                <span class="text-base mb-0.5">✈️</span><span>Partager (WhatsApp)</span>
+              </button>
+              <button id="validate-sale-btn" onclick="validateSale()" class="col-span-5 green-btn-gradient hover:opacity-95 text-white rounded-xl py-3 px-3 flex items-center justify-center gap-2 font-extrabold text-sm shadow-md transition">
+                <span>✓</span><span>Valider la vente</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ==================== MODULE 2 : TABLEAU DE BORD ==================== -->
+      <section id="view-dashboard" class="app-view hidden flex-1 p-5 space-y-5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-extrabold text-[#0b5d1e]">🏠 Tableau de bord — Boutique PIAGNA</h2>
+          <button onclick="navigateTo('pos')" class="green-btn-gradient text-white px-4 py-2 rounded-xl text-xs font-bold shadow">Nouvelle vente →</button>
+        </div>
+        <div id="dashboard-kpis" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <h3 class="font-bold text-slate-800 mb-3">Dernières ventes enregistrées</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 uppercase">
+                <tr><th class="p-3">Facture</th><th class="p-3">Date</th><th class="p-3">Client</th><th class="p-3">Qté</th><th class="p-3">Total</th><th class="p-3">Avance</th><th class="p-3">Reste</th></tr>
+              </thead>
+              <tbody id="dashboard-recent-sales" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== MODULE 3 : PRODUITS (SAISIE & CATALOGUE) ==================== -->
+      <section id="view-products" class="app-view hidden flex-1 p-5 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-xl font-extrabold text-[#0b5d1e]">📦 Gestion des Produits & Catégories</h2>
+          <button onclick="addNewCategory()" class="bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 px-3.5 py-2 rounded-xl text-xs font-bold">+ Nouvelle catégorie</button>
+        </div>
+
+        <!-- Formulaire d'ajout de produit -->
+        <form onsubmit="handleAddProduct(event)" class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+          <h3 class="font-bold text-sm text-[#0b5d1e] border-b pb-2">➕ Ajouter un nouveau produit dans la boutique</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div class="lg:col-span-2">
+              <label class="block text-xs font-bold text-slate-700 mb-1">Nom du produit *</label>
+              <input id="prod-name" type="text" required placeholder="Ex: Bazin Riche Super" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0b5d1e]" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Code SKU *</label>
+              <input id="prod-sku" type="text" required placeholder="Ex: SKU-001" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0b5d1e]" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Catégorie</label>
+              <select id="prod-category" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#0b5d1e]"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Prix d'achat (FCFA)</label>
+              <input id="prod-cost" type="number" min="0" value="0" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0b5d1e]" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Prix de vente (FCFA) *</label>
+              <input id="prod-price" type="number" min="1" required placeholder="15000" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0b5d1e]" />
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Stock initial (quantité)</label>
+              <input id="prod-initial-stock" type="number" min="0" value="10" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0b5d1e]" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Seuil alerte stock bas</label>
+              <input id="prod-threshold" type="number" min="1" value="5" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0b5d1e]" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Unité</label>
+              <input id="prod-unit" type="text" value="pièce" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#0b5d1e]" />
+            </div>
+            <button id="save-prod-btn" type="submit" class="green-btn-gradient hover:opacity-95 text-white font-bold py-2.5 px-4 rounded-xl text-sm shadow">
+              ✓ Enregistrer le produit
+            </button>
+          </div>
+        </form>
+
+        <!-- Liste des produits -->
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <h3 class="font-bold text-slate-800 mb-3">Catalogue des produits enregistrés (<span id="products-table-count">0</span>)</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 uppercase">
+                <tr><th class="p-3">SKU</th><th class="p-3">Produit</th><th class="p-3">Catégorie</th><th class="p-3">CMP / Achat</th><th class="p-3">Prix Vente</th><th class="p-3">Stock</th></tr>
+              </thead>
+              <tbody id="products-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== MODULE 4 : ACHATS (APPROVISIONNEMENT) ==================== -->
+      <section id="view-purchases" class="app-view hidden flex-1 p-5 space-y-5">
+        <h2 class="text-xl font-extrabold text-[#0b5d1e]">🚚 Achats & Réapprovisionnement Stock</h2>
+        <form onsubmit="handleAddPurchase(event)" class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+          <h3 class="font-bold text-sm text-[#0b5d1e] border-b pb-2">➕ Enregistrer une entrée de marchandise (Achat fournisseur)</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div class="lg:col-span-2">
+              <label class="block text-xs font-bold text-slate-700 mb-1">Produit acheté *</label>
+              <select id="purch-product" required class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Fournisseur</label>
+              <input id="purch-supplier" type="text" placeholder="Ex: Grossiste Bamako" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Quantité achetée *</label>
+              <input id="purch-qty" type="number" min="1" required value="10" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Prix d'achat unitaire (FCFA) *</label>
+              <input id="purch-cost" type="number" min="0" required placeholder="5000" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" class="green-btn-gradient text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow">✓ Valider l'achat & Mettre à jour le stock</button>
+          </div>
+        </form>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+          <h3 class="font-bold text-slate-800 mb-3">Historique des achats</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-600 uppercase">
+                <tr><th class="p-3">N° Achat</th><th class="p-3">Fournisseur</th><th class="p-3">Date</th><th class="p-3">Montant Total</th><th class="p-3">Statut</th></tr>
+              </thead>
+              <tbody id="purchases-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== MODULE 5 : CLIENTS ==================== -->
+      <section id="view-customers" class="app-view hidden flex-1 p-5 space-y-5">
+        <h2 class="text-xl font-extrabold text-[#0b5d1e]">👥 Répertoire des Clients</h2>
+        <form onsubmit="handleAddCustomerDirect(event)" class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Nom complet *</label>
+            <input id="cust-direct-name" type="text" required placeholder="Ex: Fatoumata Diallo" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Téléphone / WhatsApp *</label>
+            <input id="cust-direct-phone" type="tel" required placeholder="Ex: 76258871" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Adresse / Quartier</label>
+            <input id="cust-direct-address" type="text" placeholder="Ex: Banankoro" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <button type="submit" class="green-btn-gradient text-white font-bold py-2.5 px-4 rounded-xl text-sm shadow">+ Ajouter le client</button>
+        </form>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 uppercase">
+              <tr><th class="p-3">Nom du client</th><th class="p-3">Téléphone</th><th class="p-3">Adresse</th><th class="p-3">Total Achats</th><th class="p-3">Reste à payer (Dette)</th></tr>
+            </thead>
+            <tbody id="customers-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== MODULE 6 : DETTES & PAIEMENTS ==================== -->
+      <section id="view-debts" class="app-view hidden flex-1 p-5 space-y-5">
+        <h2 class="text-xl font-extrabold text-[#0b5d1e]">💳 Dettes Clients & Encaissement des Avances</h2>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 uppercase">
+              <tr><th class="p-3">Facture</th><th class="p-3">Client</th><th class="p-3">Téléphone</th><th class="p-3">Total</th><th class="p-3">Avance payée</th><th class="p-3">Reste à payer</th><th class="p-3">Action</th></tr>
+            </thead>
+            <tbody id="debts-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== MODULE 7 : STOCK ==================== -->
+      <section id="view-stock" class="app-view hidden flex-1 p-5 space-y-5">
+        <h2 class="text-xl font-extrabold text-[#0b5d1e]">🏬 État du Stock & Mouvements</h2>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 uppercase">
+              <tr><th class="p-3">SKU</th><th class="p-3">Produit</th><th class="p-3">Stock actuel</th><th class="p-3">Seuil alerte</th><th class="p-3">Valeur Stock (CMP)</th><th class="p-3">Ajustement rapide</th></tr>
+            </thead>
+            <tbody id="stock-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== MODULE 8 : DÉPENSES ==================== -->
+      <section id="view-expenses" class="app-view hidden flex-1 p-5 space-y-5">
+        <h2 class="text-xl font-extrabold text-[#0b5d1e]">👛 Gestion des Dépenses de la Boutique</h2>
+        <form onsubmit="handleAddExpense(event)" class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Catégorie</label>
+            <select id="exp-category" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm bg-white">
+              <option value="loyer">Loyer</option>
+              <option value="electricite">Électricité / Eau</option>
+              <option value="transport">Transport / Livraison</option>
+              <option value="communication">Crédit / Internet</option>
+              <option value="entretien">Entretien</option>
+              <option value="divers">Divers</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Montant (FCFA) *</label>
+            <input id="exp-amount" type="number" min="1" required placeholder="10000" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Description *</label>
+            <input id="exp-desc" type="text" required placeholder="Ex: Facture EDM du mois" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <button type="submit" class="green-btn-gradient text-white font-bold py-2.5 px-4 rounded-xl text-sm shadow">+ Enregistrer dépense</button>
+        </form>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 uppercase">
+              <tr><th class="p-3">Date</th><th class="p-3">Catégorie</th><th class="p-3">Description</th><th class="p-3">Montant</th></tr>
+            </thead>
+            <tbody id="expenses-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== MODULE 9 : RAPPORTS & ANALYSES ==================== -->
+      <section id="view-reports" class="app-view hidden flex-1 p-5 space-y-5">
+        <h2 class="text-xl font-extrabold text-[#0b5d1e]">📊 Rapports Financiers & Rentabilité</h2>
+        <div id="reports-summary" class="grid grid-cols-1 sm:grid-cols-4 gap-4"></div>
+      </section>
+
+      <!-- ==================== MODULE 10 : UTILISATEURS ==================== -->
+      <section id="view-users" class="app-view hidden flex-1 p-5 space-y-5">
+        <h2 class="text-xl font-extrabold text-[#0b5d1e]">👤 Utilisateurs & Rôles (Propriétaire : CHIE)</h2>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 text-slate-600 uppercase">
+              <tr><th class="p-3">Nom complet</th><th class="p-3">Rôle</th><th class="p-3">Téléphone</th><th class="p-3">Statut</th></tr>
+            </thead>
+            <tbody id="users-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ==================== MODULE 11 : PARAMÈTRES ==================== -->
+      <section id="view-settings" class="app-view hidden flex-1 p-5 space-y-5">
+        <h2 class="text-xl font-extrabold text-[#0b5d1e]">⚙️ Paramètres de la Boutique PIAGNA</h2>
+        <form onsubmit="handleSaveSettings(event)" class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm max-w-2xl space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Nom de la boutique</label>
+              <input id="set-store-name" type="text" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Propriétaire</label>
+              <input id="set-owner-name" type="text" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Téléphone boutique</label>
+              <input id="set-phone" type="text" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">WhatsApp Reçus</label>
+              <input id="set-whatsapp" type="text" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Adresse complète (imprimée sur les reçus)</label>
+            <input id="set-address" type="text" class="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm" />
+          </div>
+          <button type="submit" class="green-btn-gradient text-white font-bold py-2.5 px-6 rounded-xl text-sm shadow">✓ Enregistrer les paramètres</button>
+        </form>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- MODALE CLIENT CAISSE -->
+  <div id="client-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-extrabold text-lg text-[#0b5d1e]">Informations du Client</h3>
+        <button onclick="closeClientModal()" class="text-slate-400 hover:text-slate-700 font-bold">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nom complet du client *</label>
+          <input id="modal-client-name" type="text" placeholder="Ex: Moussa Traoré" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Numéro de téléphone (WhatsApp) *</label>
+          <input id="modal-client-phone" type="tel" placeholder="Ex: 76258871" class="w-full border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm" />
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="clearCustomer()" class="px-4 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50">Retirer client</button>
+        <button onclick="saveCustomer()" class="green-btn-gradient text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE REÇU -->
+  <div id="receipt-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+      <div id="receipt-printable" class="text-xs font-mono space-y-3 text-slate-800">
+        <div class="text-center border-b border-dashed border-slate-300 pb-3">
+          <div class="font-extrabold text-lg text-[#0b5d1e]">BOUTIQUE PIAGNA</div>
+          <div id="receipt-store-address">Quartier Banakoro, derrière Polyclinique les Orangers</div>
+          <div id="receipt-store-phones">Tél : 69 72 83 47 / WhatsApp : 76 25 88 71</div>
+          <div id="receipt-meta" class="mt-2 text-[11px] text-slate-500"></div>
+        </div>
+        <div id="receipt-customer-box" class="border-b border-dashed border-slate-300 pb-2"></div>
+        <div id="receipt-lines" class="space-y-1.5 border-b border-dashed border-slate-300 pb-3"></div>
+        <div id="receipt-totals" class="space-y-1 font-bold"></div>
+        <div class="text-center text-[11px] italic pt-2 text-slate-500">PIAGNA, votre partenaire pour une gestion réussie !</div>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button onclick="closeReceiptModal()" class="flex-1 py-2.5 rounded-xl border border-slate-300 text-xs font-bold">Fermer</button>
+        <button onclick="window.print()" class="flex-1 green-btn-gradient text-white py-2.5 rounded-xl text-xs font-bold">🖨️ Imprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://ruyxkkkbldcecqscsqgs.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_H2_pa0ahy7gvoWcH-Ur_Lg_21-MVzNe';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let CURRENT_USER = null;
+    let CATEGORIES = [];
+    let PRODUCTS = [];
+    let SALES = [];
+    let CUSTOMERS = [];
+    let EXPENSES = [];
+    let PURCHASES = [];
+    let STORE_SETTINGS = null;
+
+    let activeCategory = 'all';
+    let cart = [];
+    let discountPercent = 0;
+    let saleNotes = '';
+    let customer = { full_name: '', phone: '' };
+    let paymentMethod = 'cash';
+    let manualAdvance = null;
+    let lastInvoiceNumber = '';
+
+    function formatFCFA(n) {
+      return Math.round(Number(n || 0)).toLocaleString('fr-FR') + ' FCFA';
+    }
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('live-date').textContent = now.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+      document.getElementById('live-time').textContent = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+    setInterval(updateClock, 10000);
+    updateClock();
+
+    // ==================== NAVIGATION ENTRE LES 11 MODULES ====================
+    function navigateTo(tabKey) {
+      document.querySelectorAll('.app-view').forEach(v => v.classList.add('hidden'));
+      const target = document.getElementById('view-' + tabKey);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.nav-item').forEach(btn => {
+        if (btn.dataset.tab === tabKey) {
+          btn.className = 'nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl orange-gradient text-white font-bold shadow-md transition';
+        } else {
+          btn.className = 'nav-item w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-emerald-50 hover:bg-white/10 transition';
+        }
+      });
+    }
+
+    // ==================== AUTHENTIFICATION ====================
+    async function initAuth() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        await showApp(session.user);
+      } else {
+        document.getElementById('auth-screen').classList.remove('hidden');
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const errBox = document.getElementById('auth-error');
+      const btn = document.getElementById('login-btn');
+      errBox.classList.add('hidden');
+      btn.disabled = true;
+      btn.textContent = 'Connexion...';
+
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      btn.disabled = false;
+      btn.textContent = 'Se connecter à PIAGNA';
+
+      if (error) {
+        errBox.textContent = 'Erreur : ' + error.message;
+        errBox.classList.remove('hidden');
+        return;
+      }
+      await showApp(data.user);
+    }
+
+    async function handleLogout() {
+      await sb.auth.signOut();
+      location.reload();
+    }
+
+    async function showApp(user) {
+      CURRENT_USER = user;
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+      document.getElementById('app-screen').classList.add('flex');
+
+      const [{ data: profile }, { data: settings }] = await Promise.all([
+        sb.from('user_profiles').select('*').eq('id', user.id).single(),
+        sb.from('store_settings').select('*').eq('id', 1).single()
+      ]);
+
+      STORE_SETTINGS = settings;
+      const roleLabels = { owner: 'Propriétaire', manager: 'Gérant', employee: 'Employé(e)' };
+      document.getElementById('header-user-name').textContent = `Bonjour, ${profile?.full_name || settings?.owner_name || 'CHIE'}`;
+      document.getElementById('header-user-role').textContent = roleLabels[profile?.role] || 'Propriétaire';
+
+      if (settings) {
+        document.getElementById('header-store-name').textContent = settings.store_name;
+        document.getElementById('header-store-subtitle').textContent = settings.subtitle;
+        document.getElementById('set-store-name').value = settings.store_name || '';
+        document.getElementById('set-owner-name').value = settings.owner_name || 'Chie';
+        document.getElementById('set-phone').value = settings.phone || '';
+        document.getElementById('set-whatsapp').value = settings.whatsapp || '';
+        document.getElementById('set-address').value = settings.address || '';
+        document.getElementById('receipt-store-address').textContent = settings.address || '';
+        document.getElementById('receipt-store-phones').textContent = `Tél : ${settings.phone || ''} / WhatsApp : ${settings.whatsapp || ''}`;
+      }
+
+      await loadAllData();
+    }
+
+    // ==================== CHARGEMENT COMPLET DES DONNÉES ====================
+    async function loadAllData() {
+      const [catRes, prodRes, salesRes, custRes, expRes, purchRes, usersRes] = await Promise.all([
+        sb.from('categories').select('*').eq('is_active', true).order('name'),
+        sb.from('products_with_stock').select('*').eq('is_active', true).order('name'),
+        sb.from('sales_with_balances').select('*').eq('sale_status', 'validated').order('sale_date', { ascending: false }),
+        sb.from('customers').select('*').order('full_name'),
+        sb.from('expenses').select('*').order('expense_date', { ascending: false }),
+        sb.from('purchases').select('*').order('purchase_date', { ascending: false }),
+        sb.from('user_profiles').select('*').order('created_at')
+      ]);
+
+      CATEGORIES = catRes.data || [];
+      PRODUCTS = prodRes.data || [];
+      SALES = salesRes.data || [];
+      CUSTOMERS = custRes.data || [];
+      EXPENSES = expRes.data || [];
+      PURCHASES = purchRes.data || [];
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const todaySales = SALES.filter(s => (s.sale_date || '').startsWith(todayStr));
+      const dailyTotal = todaySales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
+      const unpaidSales = SALES.filter(s => Number(s.remaining_balance || 0) > 0);
+      const debtTotal = unpaidSales.reduce((sum, s) => sum + Number(s.remaining_balance || 0), 0);
+      const totalStock = PRODUCTS.reduce((s, p) => s + Number(p.current_stock || 0), 0);
+
+      document.getElementById('kpi-daily-sales').textContent = formatFCFA(dailyTotal);
+      document.getElementById('kpi-debtors-count').textContent = unpaidSales.length;
+      document.getElementById('sidebar-debt-count').textContent = unpaidSales.length;
+      document.getElementById('kpi-debtors-amount').textContent = formatFCFA(debtTotal);
+      document.getElementById('kpi-stock-count').textContent = `${totalStock} articles`;
+      document.getElementById('sync-time').textContent = 'Dernière sync. : ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+      renderCategories();
+      renderProducts();
+      renderCart();
+      renderAllModules(usersRes.data || []);
+    }
+
+    // ==================== RENDU CAISSE ====================
+    function renderCategories() {
+      const list = [{ id: 'all', name: 'Tous', icon: '⊞' }, ...CATEGORIES.map(c => ({ id: c.id, name: c.name, icon: '🏷️' }))];
+      document.getElementById('category-filters').innerHTML = list.map(cat => `
+        <button onclick="setCategory('${cat.id}')" class="px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-sm border ${
+          cat.id === activeCategory ? 'bg-[#0b5d1e] text-white border-[#0b5d1e]' : 'bg-white text-slate-700 border-slate-200 hover:bg-emerald-50'
+        }"><span>${cat.icon}</span><span>${cat.name}</span></button>
+      `).join('');
+
+      const sel = document.getElementById('prod-category');
+      if (sel) {
+        sel.innerHTML = `<option value="">-- Sans catégorie --</option>` + CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      }
+    }
+
+    function setCategory(id) {
+      activeCategory = id;
+      renderCategories();
+      renderProducts();
+    }
+
+    function renderProducts() {
+      const query = document.getElementById('search-input').value.toLowerCase().trim();
+      const filtered = PRODUCTS.filter(p => {
+        const matchCat = activeCategory === 'all' || p.category_id === activeCategory;
+        const matchText = (p.name || '').toLowerCase().includes(query) || (p.sku || '').toLowerCase().includes(query);
+        return matchCat && matchText;
+      });
+
+      const grid = document.getElementById('products-grid');
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-10 px-4 text-center bg-white rounded-2xl border border-dashed border-slate-300 space-y-3">
+            <div class="text-sm text-slate-600">Aucun produit disponible dans votre boutique.</div>
+            <button onclick="navigateTo('products')" class="green-btn-gradient text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow">➕ Ajouter mon premier produit</button>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(p => {
+        const inCart = cart.find(item => item.id === p.id);
+        const stock = Number(p.current_stock || 0);
+        return `
+          <div onclick="addToCart('${p.id}')" class="cursor-pointer bg-white rounded-2xl p-3.5 text-center border-2 transition shadow-sm hover:shadow-md relative flex flex-col items-center justify-between ${
+            inCart ? 'border-[#0b5d1e] ring-2 ring-emerald-500/20' : 'border-slate-200 hover:border-emerald-400'
+          }">
+            ${inCart ? `<span class="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#0b5d1e] text-white text-[11px] font-bold flex items-center justify-center">✓</span>` : ''}
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-[#0b5d1e] flex items-center justify-center text-2xl font-bold my-1.5">📦</div>
+            <div class="w-full">
+              <div class="font-bold text-slate-800 text-sm truncate">${p.name}</div>
+              <div class="font-extrabold text-slate-900 text-xs mt-0.5">${formatFCFA(p.sale_price)}</div>
+              <div class="text-[10px] ${stock <= (p.low_stock_threshold || 5) ? 'text-red-600 font-bold' : 'text-slate-400'} mt-0.5">Stock : ${stock}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function addToCart(productId) {
+      const prod = PRODUCTS.find(p => p.id === productId);
+      const stock = Number(prod?.current_stock || 0);
+      if (!prod || stock <= 0) return alert('Stock épuisé pour ce produit.');
+      const existing = cart.find(i => i.id === productId);
+      if (existing) {
+        if (existing.quantity + 1 > stock) return alert('Quantité supérieure au stock disponible (' + stock + ').');
+        existing.quantity += 1;
+      } else {
+        cart.push({ ...prod, quantity: 1 });
+      }
+      manualAdvance = null;
+      renderProducts();
+      renderCart();
+    }
+
+    function updateQty(productId, delta) {
+      const item = cart.find(i => i.id === productId);
+      if (!item) return;
+      const newQty = item.quantity + delta;
+      if (newQty <= 0) cart = cart.filter(i => i.id !== productId);
+      else if (newQty <= Number(item.current_stock || 0)) item.quantity = newQty;
+      manualAdvance = null;
+      renderProducts();
+      renderCart();
+    }
+
+    function removeFromCart(productId) {
+      cart = cart.filter(i => i.id !== productId);
+      manualAdvance = null;
+      renderProducts();
+      renderCart();
+    }
+
+    function clearCart() {
+      cart = [];
+      discountPercent = 0;
+      manualAdvance = null;
+      document.getElementById('quick-discount-label').textContent = '0 % appliquée';
+      renderProducts();
+      renderCart();
+    }
+
+    function computeTotals() {
+      const subtotal = cart.reduce((sum, i) => sum + Number(i.sale_price) * i.quantity, 0);
+      const discountAmount = Math.round(subtotal * (discountPercent / 100));
+      const total = Math.max(0, subtotal - discountAmount);
+      const totalQty = cart.reduce((sum, i) => sum + i.quantity, 0);
+      let advance = manualAdvance !== null ? manualAdvance : (paymentMethod === 'credit' ? 0 : total);
+      if (advance > total) advance = total;
+      if (advance < 0) advance = 0;
+      return { subtotal, discountAmount, total, totalQty, advance, remaining: total - advance };
+    }
+
+    function renderCart() {
+      const list = document.getElementById('cart-items-list');
+      if (cart.length === 0) {
+        list.innerHTML = `<div class="py-10 text-center text-xs text-slate-400">Aucun article dans le panier.<br/>Cliquez sur un produit à gauche pour l'ajouter.</div>`;
+      } else {
+        list.innerHTML = cart.map(item => `
+          <div class="py-3 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-base shrink-0">📦</div>
+              <div class="truncate">
+                <div class="font-bold text-slate-900 text-sm truncate">${item.name}</div>
+                <div class="text-xs text-slate-500">${formatFCFA(item.sale_price)}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button onclick="updateQty('${item.id}', -1)" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center">−</button>
+              <span class="w-5 text-center font-bold text-sm">${item.quantity}</span>
+              <button onclick="updateQty('${item.id}', 1)" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 flex items-center justify-center">+</button>
+            </div>
+            <div class="flex items-center gap-2.5 shrink-0">
+              <span class="font-extrabold text-sm text-slate-900 w-16 text-right">${(Number(item.sale_price) * item.quantity).toLocaleString('fr-FR')}</span>
+              <button onclick="removeFromCart('${item.id}')" class="w-6 h-6 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center justify-center">✕</button>
+            </div>
+          </div>`).join('');
+      }
+      const { subtotal, discountAmount, total, totalQty, advance, remaining } = computeTotals();
+      document.getElementById('cart-total-qty').textContent = totalQty;
+      document.getElementById('subtotal-amount').textContent = formatFCFA(subtotal);
+      document.getElementById('discount-percent-display').textContent = discountPercent;
+      document.getElementById('discount-amount').textContent = formatFCFA(discountAmount);
+      document.getElementById('total-amount').textContent = formatFCFA(total);
+      document.getElementById('advance-input').value = advance;
+      document.getElementById('remaining-amount').textContent = formatFCFA(remaining);
+    }
+
+    function onAdvanceChange() {
+      const raw = document.getElementById('advance-input').value;
+      manualAdvance = raw === '' ? 0 : parseFloat(raw);
+      const { total, remaining } = computeTotals();
+      if (manualAdvance > total) {
+        manualAdvance = total;
+        document.getElementById('advance-input').value = total;
+      }
+      document.getElementById('remaining-amount').textContent = formatFCFA(remaining);
+    }
+
+    function selectPaymentMethod(method, btn) {
+      paymentMethod = method;
+      manualAdvance = null;
+      document.querySelectorAll('.pay-btn').forEach(b => {
+        b.className = 'pay-btn bg-slate-100 hover:bg-emerald-50 text-slate-700 rounded-xl p-2.5 flex flex-col items-center justify-center text-center border border-slate-200 transition';
+      });
+      btn.className = (method === 'card' || method === 'credit')
+        ? 'pay-btn orange-gradient text-white rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-sm transition'
+        : 'pay-btn bg-[#0b5d1e] text-white rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-sm transition';
+      renderCart();
+    }
+
+    function openClientModal() {
+      document.getElementById('modal-client-name').value = customer.full_name;
+      document.getElementById('modal-client-phone').value = customer.phone;
+      document.getElementById('client-modal').classList.replace('hidden', 'flex');
+    }
+    function closeClientModal() { document.getElementById('client-modal').classList.replace('flex', 'hidden'); }
+    function saveCustomer() {
+      customer = { full_name: document.getElementById('modal-client-name').value.trim(), phone: document.getElementById('modal-client-phone').value.trim() };
+      updateCustomerUI();
+      closeClientModal();
+    }
+    function clearCustomer() { customer = { full_name: '', phone: '' }; updateCustomerUI(); closeClientModal(); }
+    function updateCustomerUI() {
+      document.getElementById('quick-client-name').textContent = customer.full_name || 'Ajouter client';
+      document.getElementById('quick-client-phone').textContent = customer.full_name ? (customer.phone || 'Sans numéro') : '(facultatif)';
+      document.getElementById('banner-client-info').textContent = customer.full_name ? `${customer.full_name} (${customer.phone || 'N/A'})` : 'Client comptant (Anonyme)';
+    }
+
+    function promptDiscount() {
+      const val = prompt('Pourcentage de remise (0 à 100) :', discountPercent);
+      if (val !== null && !isNaN(parseFloat(val))) {
+        discountPercent = Math.min(100, Math.max(0, parseFloat(val)));
+        document.getElementById('quick-discount-label').textContent = `${discountPercent} % appliquée`;
+        manualAdvance = null;
+        renderCart();
+      }
+    }
+    function promptNotes() {
+      const val = prompt('Notes sur la vente :', saleNotes);
+      if (val !== null) {
+        saleNotes = val.trim();
+        document.getElementById('quick-notes-label').textContent = saleNotes || '(Optionnel)';
+      }
+    }
+
+    async function validateSale() {
+      if (cart.length === 0) return alert('Le panier est vide.');
+      const { discountAmount, total, totalQty, advance, remaining } = computeTotals();
+      if (remaining > 0 && (!customer.full_name || !customer.phone)) {
+        alert('Nom et numéro du client obligatoires si reste à payer > 0.');
+        return openClientModal();
+      }
+      const btn = document.getElementById('validate-sale-btn');
+      btn.disabled = true;
+      btn.textContent = 'Enregistrement...';
+
+      const { data, error } = await sb.rpc('validate_sale_transaction', {
+        p_customer_name: customer.full_name || '',
+        p_customer_phone: customer.phone || '',
+        p_discount_amount: discountAmount,
+        p_advance_amount: advance,
+        p_payment_method: paymentMethod === 'credit' ? 'cash' : paymentMethod,
+        p_notes: saleNotes || '',
+        p_items: cart.map(i => ({ product_id: i.id, quantity: i.quantity, unit_price: Number(i.sale_price) }))
+      });
+
+      btn.disabled = false;
+      btn.innerHTML = '<span>✓</span><span>Valider la vente</span>';
+      if (error) return alert('Erreur : ' + error.message);
+
+      lastInvoiceNumber = data.invoice_number;
+      alert(`✅ Vente ${data.invoice_number} enregistrée !\nTotal : ${formatFCFA(data.total_amount)} | Avance : ${formatFCFA(data.advance_paid)} | Reste : ${formatFCFA(data.remaining_balance)}`);
+      openReceiptModal();
+      clearCart();
+      clearCustomer();
+      await loadAllData();
+    }
+
+    function openReceiptModal() {
+      if (cart.length === 0) return alert('Panier vide.');
+      const { subtotal, discountAmount, total, totalQty, advance, remaining } = computeTotals();
+      document.getElementById('receipt-meta').textContent = `Reçu #${lastInvoiceNumber || 'BROUILLON'} • ${new Date().toLocaleString('fr-FR')}`;
+      document.getElementById('receipt-customer-box').innerHTML = `<div><strong>Client :</strong> ${customer.full_name || 'Client comptant'}</div><div><strong>Tél :</strong> ${customer.phone || '-'}</div>`;
+      document.getElementById('receipt-lines').innerHTML = cart.map(i => `<div class="flex justify-between"><span>${i.quantity}x ${i.name}</span><span>${(i.quantity * Number(i.sale_price)).toLocaleString('fr-FR')} F</span></div>`).join('');
+      document.getElementById('receipt-totals').innerHTML = `
+        <div class="flex justify-between font-normal"><span>Quantité :</span><span>${totalQty} art.</span></div>
+        <div class="flex justify-between font-normal"><span>Sous-total :</span><span>${formatFCFA(subtotal)}</span></div>
+        <div class="flex justify-between font-normal"><span>Remise :</span><span>${formatFCFA(discountAmount)}</span></div>
+        <div class="flex justify-between text-sm text-[#0b5d1e] pt-1 border-t"><span>TOTAL :</span><span>${formatFCFA(total)}</span></div>
+        <div class="flex justify-between text-emerald-700"><span>AVANCE :</span><span>${formatFCFA(advance)}</span></div>
+        <div class="flex justify-between text-orange-600"><span>RESTE À PAYER :</span><span>${formatFCFA(remaining)}</span></div>`;
+      document.getElementById('receipt-modal').classList.replace('hidden', 'flex');
+    }
+    function closeReceiptModal() { document.getElementById('receipt-modal').classList.replace('flex', 'hidden'); }
+
+    function shareWhatsApp() {
+      if (cart.length === 0) return alert('Panier vide.');
+      const { total, totalQty, advance, remaining } = computeTotals();
+      const itemsText = cart.map(i => `- ${i.quantity}x ${i.name} : ${(i.quantity * Number(i.sale_price)).toLocaleString('fr-FR')} FCFA`).join('\n');
+      const msg = `*REÇU BOUTIQUE PIAGNA*\nClient : ${customer.full_name || 'Client comptant'}\nTél : ${customer.phone || '-'}\n---\n${itemsText}\n---\nQté : ${totalQty}\n*Total : ${formatFCFA(total)}*\nAvance : ${formatFCFA(advance)}\n*Reste : ${formatFCFA(remaining)}*`;
+      const phoneClean = customer.phone.replace(/\D/g, '');
+      window.open(phoneClean ? `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    // ==================== ACTIONS DES AUTRES MODULES ====================
+    async function addNewCategory() {
+      const name = prompt('Nom de la nouvelle catégorie (ex: Vêtements, Chaussures, Accessoires) :');
+      if (!name || !name.trim()) return;
+      const { error } = await sb.from('categories').insert({ name: name.trim() });
+      if (error) return alert('Erreur : ' + error.message);
+      await loadAllData();
+    }
+
+    async function handleAddProduct(e) {
+      e.preventDefault();
+      const name = document.getElementById('prod-name').value.trim();
+      const sku = document.getElementById('prod-sku').value.trim();
+      const category_id = document.getElementById('prod-category').value || null;
+      const cost = parseFloat(document.getElementById('prod-cost').value) || 0;
+      const sale_price = parseFloat(document.getElementById('prod-price').value);
+      const initialStock = parseFloat(document.getElementById('prod-initial-stock').value) || 0;
+      const low_stock_threshold = parseFloat(document.getElementById('prod-threshold').value) || 5;
+      const unit = document.getElementById('prod-unit').value.trim() || 'pièce';
+
+      const { data: prod, error } = await sb.from('products').insert({
+        name, sku, category_id, current_cmp: cost, sale_price, low_stock_threshold, unit, is_active: true
+      }).select().single();
+
+      if (error) return alert('Erreur ajout produit : ' + error.message);
+
+      if (initialStock > 0 && prod) {
+        await sb.from('stock_movements').insert({
+          product_id: prod.id,
+          movement_type: 'adjustment_in',
+          quantity: initialStock,
+          unit_cost: cost,
+          reason: 'Stock initial à la création du produit',
+          created_by: CURRENT_USER.id
+        });
+      }
+
+      e.target.reset();
+      document.getElementById('prod-initial-stock').value = 10;
+      document.getElementById('prod-threshold').value = 5;
+      document.getElementById('prod-unit').value = 'pièce';
+      alert(`✅ Produit "${name}" ajouté avec succès !`);
+      await loadAllData();
+    }
+
+    async function handleAddPurchase(e) {
+      e.preventDefault();
+      const product_id = document.getElementById('purch-product').value;
+      const supplier_name = document.getElementById('purch-supplier').value.trim() || 'Fournisseur général';
+      const qty = parseFloat(document.getElementById('purch-qty').value);
+      const unit_cost = parseFloat(document.getElementById('purch-cost').value);
+      const total = qty * unit_cost;
+      const purchase_number = 'ACH-' + Date.now().toString().slice(-6);
+
+      const { data: purch, error } = await sb.from('purchases').insert({
+        purchase_number, supplier_name, total_amount: total, amount_paid: total, payment_status: 'paid', created_by: CURRENT_USER.id
+      }).select().single();
+      if (error) return alert('Erreur achat : ' + error.message);
+
+      await sb.from('purchase_items').insert({
+        purchase_id: purch.id, product_id, quantity: qty, unit_cost, line_total: total
+      });
+
+      await sb.from('stock_movements').insert({
+        product_id, movement_type: 'purchase', quantity: qty, unit_cost, reference_type: 'purchase', reference_id: purch.id, reason: 'Achat ' + purchase_number, created_by: CURRENT_USER.id
+      });
+
+      await sb.from('products').update({ current_cmp: unit_cost }).eq('id', product_id);
+      alert(`✅ Achat ${purchase_number} enregistré (+${qty} en stock) !`);
+      e.target.reset();
+      await loadAllData();
+    }
+
+    async function handleAddCustomerDirect(e) {
+      e.preventDefault();
+      const full_name = document.getElementById('cust-direct-name').value.trim();
+      const phone = document.getElementById('cust-direct-phone').value.trim();
+      const address = document.getElementById('cust-direct-address').value.trim();
+      const { error } = await sb.from('customers').insert({ full_name, phone, address });
+      if (error) return alert('Erreur client : ' + error.message);
+      e.target.reset();
+      await loadAllData();
+    }
+
+    async function payCustomerDebt(saleId, customerId, remaining) {
+      const raw = prompt(`Montant encaissé pour solder cette facture (Max : ${remaining} FCFA) :`, remaining);
+      if (!raw) return;
+      const amount = parseFloat(raw);
+      if (isNaN(amount) || amount <= 0 || amount > remaining) return alert('Montant invalide.');
+
+      const { error } = await sb.from('sale_payments').insert({
+        sale_id: saleId, amount, payment_method: 'cash', created_by: CURRENT_USER.id
+      });
+      if (error) return alert('Erreur encaissement : ' + error.message);
+      alert(`✅ Remboursement de ${formatFCFA(amount)} enregistré !`);
+      await loadAllData();
+    }
+
+    async function adjustStock(productId, type) {
+      const raw = prompt(type === 'adjustment_in' ? 'Quantité à AJOUTER au stock :' : 'Quantité à RETIRER du stock (casse/perte) :', '1');
+      if (!raw) return;
+      const qty = parseFloat(raw);
+      if (isNaN(qty) || qty <= 0) return;
+      const { error } = await sb.from('stock_movements').insert({
+        product_id: productId, movement_type: type, quantity: qty, reason: 'Ajustement manuel depuis module Stock', created_by: CURRENT_USER.id
+      });
+      if (error) return alert('Erreur stock : ' + error.message);
+      await loadAllData();
+    }
+
+    async function handleAddExpense(e) {
+      e.preventDefault();
+      const category = document.getElementById('exp-category').value;
+      const amount = parseFloat(document.getElementById('exp-amount').value);
+      const description = document.getElementById('exp-desc').value.trim();
+      const { error } = await sb.from('expenses').insert({ category, amount, description, created_by: CURRENT_USER.id });
+      if (error) return alert('Erreur dépense : ' + error.message);
+      e.target.reset();
+      await loadAllData();
+    }
+
+    async function handleSaveSettings(e) {
+      e.preventDefault();
+      const { error } = await sb.from('store_settings').update({
+        store_name: document.getElementById('set-store-name').value.trim(),
+        owner_name: document.getElementById('set-owner-name').value.trim(),
+        phone: document.getElementById('set-phone').value.trim(),
+        whatsapp: document.getElementById('set-whatsapp').value.trim(),
+        address: document.getElementById('set-address').value.trim()
+      }).eq('id', 1);
+      if (error) return alert('Erreur paramètres : ' + error.message);
+      alert('✅ Paramètres enregistrés !');
+      await showApp(CURRENT_USER);
+    }
+
+    // ==================== RENDU DES TABLEAUX DES AUTRES MODULES ====================
+    function renderAllModules(users) {
+      // 1. Produits
+      document.getElementById('products-table-count').textContent = PRODUCTS.length;
+      document.getElementById('products-table-body').innerHTML = PRODUCTS.map(p => `
+        <tr>
+          <td class="p-3 font-mono text-slate-500">${p.sku}</td>
+          <td class="p-3 font-bold text-slate-900">${p.name}</td>
+          <td class="p-3">${p.category_name || '-'}</td>
+          <td class="p-3">${formatFCFA(p.current_cmp)}</td>
+          <td class="p-3 font-bold text-[#0b5d1e]">${formatFCFA(p.sale_price)}</td>
+          <td class="p-3 font-bold">${p.current_stock} ${p.unit || ''}</td>
+        </tr>`).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">Aucun produit enregistré.</td></tr>`;
+
+      // Select achats
+      document.getElementById('purch-product').innerHTML = PRODUCTS.map(p => `<option value="${p.id}">${p.name} (Stock: ${p.current_stock})</option>`).join('');
+
+      // 2. Achats
+      document.getElementById('purchases-table-body').innerHTML = PURCHASES.map(a => `
+        <tr>
+          <td class="p-3 font-mono font-bold">${a.purchase_number}</td>
+          <td class="p-3">${a.supplier_name || '-'}</td>
+          <td class="p-3">${new Date(a.purchase_date).toLocaleDateString('fr-FR')}</td>
+          <td class="p-3 font-bold">${formatFCFA(a.total_amount)}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold">${a.payment_status}</span></td>
+        </tr>`).join('') || `<tr><td colspan="5" class="p-4 text-center text-slate-400">Aucun achat enregistré.</td></tr>`;
+
+      // 3. Clients
+      document.getElementById('customers-table-body').innerHTML = CUSTOMERS.map(c => {
+        const custSales = SALES.filter(s => s.customer_id === c.id);
+        const totalBought = custSales.reduce((s, x) => s + Number(x.total_amount || 0), 0);
+        const totalDebt = custSales.reduce((s, x) => s + Number(x.remaining_balance || 0), 0);
+        return `
+          <tr>
+            <td class="p-3 font-bold text-slate-900">${c.full_name}</td>
+            <td class="p-3">${c.phone || '-'}</td>
+            <td class="p-3">${c.address || '-'}</td>
+            <td class="p-3 font-bold">${formatFCFA(totalBought)}</td>
+            <td class="p-3 font-bold ${totalDebt > 0 ? 'text-red-600' : 'text-emerald-700'}">${formatFCFA(totalDebt)}</td>
+          </tr>`;
+      }).join('') || `<tr><td colspan="5" class="p-4 text-center text-slate-400">Aucun client enregistré.</td></tr>`;
+
+      // 4. Dettes & Paiements
+      const debts = SALES.filter(s => Number(s.remaining_balance || 0) > 0);
+      document.getElementById('debts-table-body').innerHTML = debts.map(d => `
+        <tr>
+          <td class="p-3 font-mono font-bold">${d.invoice_number}</td>
+          <td class="p-3 font-bold">${d.customer_name || 'Anonyme'}</td>
+          <td class="p-3">${d.customer_phone || '-'}</td>
+          <td class="p-3">${formatFCFA(d.total_amount)}</td>
+          <td class="p-3 text-emerald-700 font-bold">${formatFCFA(d.advance_paid)}</td>
+          <td class="p-3 text-red-600 font-extrabold">${formatFCFA(d.remaining_balance)}</td>
+          <td class="p-3">
+            <button onclick="payCustomerDebt('${d.id}', '${d.customer_id}', ${d.remaining_balance})" class="green-btn-gradient text-white px-3 py-1.5 rounded-lg font-bold">Encaisser</button>
+          </td>
+        </tr>`).join('') || `<tr><td colspan="7" class="p-4 text-center text-emerald-700 font-bold">Aucune dette client en cours 🎉</td></tr>`;
+
+      // 5. Stock
+      document.getElementById('stock-table-body').innerHTML = PRODUCTS.map(p => `
+        <tr>
+          <td class="p-3 font-mono">${p.sku}</td>
+          <td class="p-3 font-bold">${p.name}</td>
+          <td class="p-3 font-extrabold ${Number(p.current_stock) <= (p.low_stock_threshold || 5) ? 'text-red-600' : 'text-[#0b5d1e]'}">${p.current_stock}</td>
+          <td class="p-3">${p.low_stock_threshold}</td>
+          <td class="p-3 font-bold">${formatFCFA(Number(p.current_stock) * Number(p.current_cmp))}</td>
+          <td class="p-3 flex gap-1.5">
+            <button onclick="adjustStock('${p.id}', 'adjustment_in')" class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-lg font-bold">+ Entrée</button>
+            <button onclick="adjustStock('${p.id}', 'adjustment_out')" class="bg-red-100 text-red-700 px-2.5 py-1 rounded-lg font-bold">- Sortie</button>
+          </td>
+        </tr>`).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">Aucun stock.</td></tr>`;
+
+      // 6. Dépenses
+      document.getElementById('expenses-table-body').innerHTML = EXPENSES.map(e => `
+        <tr>
+          <td class="p-3">${new Date(e.expense_date).toLocaleDateString('fr-FR')}</td>
+          <td class="p-3 uppercase font-bold text-xs">${e.category}</td>
+          <td class="p-3">${e.description || '-'}</td>
+          <td class="p-3 font-extrabold text-red-600">${formatFCFA(e.amount)}</td>
+        </tr>`).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">Aucune dépense enregistrée.</td></tr>`;
+
+      // 7. Tableau de bord & Rapports
+      const totalRevenue = SALES.reduce((s, x) => s + Number(x.total_amount || 0), 0);
+      const totalCollected = SALES.reduce((s, x) => s + Number(x.advance_paid || 0), 0);
+      const totalDebts = SALES.reduce((s, x) => s + Number(x.remaining_balance || 0), 0);
+      const totalExp = EXPENSES.reduce((s, x) => s + Number(x.amount || 0), 0);
+
+      const kpiCards = `
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm"><div class="text-xs text-slate-500">Chiffre d'affaires total</div><div class="text-xl font-extrabold text-[#0b5d1e] mt-1">${formatFCFA(totalRevenue)}</div></div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm"><div class="text-xs text-slate-500">Total encaissé (Avances)</div><div class="text-xl font-extrabold text-emerald-700 mt-1">${formatFCFA(totalCollected)}</div></div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm"><div class="text-xs text-slate-500">Créances clients (Reste)</div><div class="text-xl font-extrabold text-orange-600 mt-1">${formatFCFA(totalDebts)}</div></div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm"><div class="text-xs text-slate-500">Total Dépenses</div><div class="text-xl font-extrabold text-red-600 mt-1">${formatFCFA(totalExp)}</div></div>`;
+      document.getElementById('dashboard-kpis').innerHTML = kpiCards;
+      document.getElementById('reports-summary').innerHTML = kpiCards;
+
+      document.getElementById('dashboard-recent-sales').innerHTML = SALES.slice(0, 10).map(s => `
+        <tr>
+          <td class="p-3 font-mono font-bold">${s.invoice_number}</td>
+          <td class="p-3">${new Date(s.sale_date).toLocaleString('fr-FR')}</td>
+          <td class="p-3 font-bold">${s.customer_name || 'Comptant'}</td>
+          <td class="p-3">${s.total_quantity}</td>
+          <td class="p-3 font-bold">${formatFCFA(s.total_amount)}</td>
+          <td class="p-3 text-emerald-700 font-bold">${formatFCFA(s.advance_paid)}</td>
+          <td class="p-3 font-bold ${Number(s.remaining_balance) > 0 ? 'text-red-600' : 'text-slate-400'}">${formatFCFA(s.remaining_balance)}</td>
+        </tr>`).join('') || `<tr><td colspan="7" class="p-4 text-center text-slate-400">Aucune vente enregistrée.</td></tr>`;
+
+      // 8. Utilisateurs
+      document.getElementById('users-table-body').innerHTML = users.map(u => `
+        <tr>
+          <td class="p-3 font-bold text-slate-900">${u.full_name}</td>
+          <td class="p-3 uppercase font-bold text-[#0b5d1e]">${u.role}</td>
+          <td class="p-3">${u.phone || '-'}</td>
+          <td class="p-3">${u.is_active ? '<span class="text-emerald-700 font-bold">Actif</span>' : '<span class="text-red-600">Inactif</span>'}</td>
+        </tr>`).join('');
+    }
+
+    initAuth();
+  </script>
+</body>
+</html>
