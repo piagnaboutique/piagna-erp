@@ -20,6 +20,10 @@
       #receipt-printable { position: fixed; left: 0; top: 0; width: 100%; }
     }
   </style>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0b5d1e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 </head>
 <body class="text-slate-800 antialiased overflow-x-hidden">
 
@@ -1279,6 +1283,13 @@
     }
 
     initAuth();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>
