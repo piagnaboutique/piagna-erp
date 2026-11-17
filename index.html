@@ -1291,5 +1291,38 @@
       });
     }
   </script>
+  <script>
+    function applyRolePermissions() {
+      const headerText = document.body.innerText || '';
+      const isEmployee = headerText.includes('Employé(e)');
+      const isManager = headerText.includes('Gérant');
+
+      if (!isEmployee && !isManager) return;
+
+      const restrictedForManager = ['Utilisateurs', 'Paramètres'];
+      const restrictedForEmployee = [
+        'Tableau de bord',
+        'Achats',
+        'Stock',
+        'Dépenses',
+        'Rapports & Analyses',
+        'Utilisateurs',
+        'Paramètres'
+      ];
+
+      const blocked = isEmployee ? restrictedForEmployee : restrictedForManager;
+
+      document.querySelectorAll('nav a, nav button, aside a, aside button').forEach((item) => {
+        const label = (item.textContent || '').trim();
+        if (blocked.some((b) => label.includes(b))) {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    const roleObserver = new MutationObserver(() => applyRolePermissions());
+    roleObserver.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('load', applyRolePermissions);
+  </script>
 </body>
 </html>
